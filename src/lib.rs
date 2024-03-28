@@ -29,14 +29,14 @@ async fn handler(
 
     let mut router = Router::new();
     router
-        .insert("/projects/:project_name", vec![get(projects_list)])
-        .unwrap();
-    router
-        .insert("/issues/:issue_id", vec![post(approve_issue_budget)])
-        .unwrap();
-    router
         .insert("/issues", vec![get(list_issues_handler)])
         .unwrap();
+    // router
+    //     .insert("/projects/:project_name", vec![get(projects_list)])
+    //     .unwrap();
+    // router
+    //     .insert("/issues/:issue_id", vec![post(approve_issue_budget)])
+    //     .unwrap();
 
     // router
     //     .insert("/project/:project_name", vec![post(decline_project)])
@@ -104,6 +104,8 @@ async fn list_issues_handler(
     _qry: HashMap<String, Value>,
     _body: Vec<u8>,
 ) {
+    log::info!("Received query parameters: {:?}", _qry);
+    
     let page = match _qry.get("page").and_then(|v| v.as_u64()) {
         Some(m) if m > 0 => m as usize,
         _ => {

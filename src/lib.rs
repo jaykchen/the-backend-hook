@@ -104,22 +104,21 @@ async fn list_issues_handler(
     _qry: HashMap<String, Value>,
     _body: Vec<u8>,
 ) {
-    let page = match _qry.get("page") {
-        Some(m) => m.as_u64().unwrap_or_default() as usize,
+    let page = match _qry.get("page").and_then(|v| v.as_u64()) {
+        Some(m) if m > 0 => m as usize,
         _ => {
-            log::error!("missing issue_id");
+            log::error!("Invalid or missing 'page' parameter");
             return;
         }
     };
 
-    let page_size = match _qry.get("page_size") {
-        Some(m) => m.as_u64().unwrap_or_default() as usize,
+    let page_size = match _qry.get("page_size").and_then(|v| v.as_u64()) {
+        Some(m) if m > 0 => m as usize,
         _ => {
-            log::error!("missing issue_budget");
+            log::error!("Invalid or missing 'page_size' parameter");
             return;
         }
     };
-
     log::error!("page: {}, page_size: {}", page, page_size);
     let pool = get_pool().await;
 
@@ -127,7 +126,7 @@ async fn list_issues_handler(
 
     let issues_str = format!("{:?}", issues_obj);
     log::error!("issues_str: {}", issues_str);
-    
+
     send_response(
         200,
         vec![(String::from("content-type"), String::from("text/html"))],

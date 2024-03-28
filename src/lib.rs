@@ -119,11 +119,15 @@ async fn list_issues_handler(
             return;
         }
     };
+
+    log::error!("page: {}, page_size: {}", page, page_size);
     let pool = get_pool().await;
 
     let issues_obj = list_issues(&pool, page, page_size).await.expect("msg");
 
     let issues_str = format!("{:?}", issues_obj);
+    log::error!("issues_str: {}", issues_str);
+    
     send_response(
         200,
         vec![(String::from("content-type"), String::from("text/html"))],

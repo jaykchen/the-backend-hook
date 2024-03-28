@@ -105,17 +105,23 @@ async fn list_issues_handler(
     _body: Vec<u8>,
 ) {
     log::info!("Received query parameters: {:?}", _qry);
-    
-    let page = match _qry.get("page").and_then(|v| v.as_u64()) {
-        Some(m) if m > 0 => m as usize,
+
+    let page = match _qry
+        .get("page")
+        .and_then(|v| v.as_str().and_then(|s| s.parse::<usize>().ok()))
+    {
+        Some(m) if m > 0 => m,
         _ => {
             log::error!("Invalid or missing 'page' parameter");
             return;
         }
     };
 
-    let page_size = match _qry.get("page_size").and_then(|v| v.as_u64()) {
-        Some(m) if m > 0 => m as usize,
+    let page_size = match _qry
+        .get("page_size")
+        .and_then(|v| v.as_str().and_then(|s| s.parse::<usize>().ok()))
+    {
+        Some(m) if m > 0 => m,
         _ => {
             log::error!("Invalid or missing 'page_size' parameter");
             return;

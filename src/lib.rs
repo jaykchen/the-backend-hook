@@ -34,6 +34,9 @@ async fn handler(
     router
         .insert("/issues/:issue_id", vec![post(approve_issue_budget)])
         .unwrap();
+    router
+        .insert("/issues", vec![get(list_issues_handler)])
+        .unwrap();
 
     // router
     //     .insert("/project/:project_name", vec![post(decline_project)])
@@ -94,7 +97,38 @@ async fn approve_issue_budget(
 
     let pool = get_pool().await;
 
-    let _ = approve_issue_budget_in_db(&pool, &issue_id, issue_budget).await;
+    // let _ = approve_issue_budget_in_db(&pool, &issue_id, issue_budget).await;
+}
+async fn list_issues_handler(
+    _headers: Vec<(String, String)>,
+    _qry: HashMap<String, Value>,
+    _body: Vec<u8>,
+) {
+    let page = match _qry.get("page") {
+        Some(m) => m.as_u64().unwrap_or_default() as usize,
+        _ => {
+            log::error!("missing issue_id");
+            return;
+        }
+    };
+
+    let page_size = match _qry.get("page_size") {
+        Some(m) => m.as_u64().unwrap_or_default() as usize,
+        _ => {
+            log::error!("missing issue_budget");
+            return;
+        }
+    };
+    let pool = get_pool().await;
+
+    let issues_obj = list_issues(&pool, page, page_size).await.expect("msg");
+
+    let issues_str = format!("{:?}", issues_obj);
+    send_response(
+        200,
+        vec![(String::from("content-type"), String::from("text/html"))],
+        issues_str.as_bytes().to_vec(),
+    );
 }
 
 async fn projects_list(

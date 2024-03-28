@@ -15,141 +15,24 @@ pub async fn get_pool() -> Pool {
     Pool::new(builder.pool_opts(pool_opts))
 }
 
-pub async fn project_exists(pool: &mysql_async::Pool, project_id: &str) -> Result<bool> {
+pub async fn list_issues(
+    pool: &Pool,
+    page: usize,
+    page_size: usize,
+) -> Result<Vec<(String, String, String, String)>> {
     let mut conn = pool.get_conn().await?;
-    let result: Option<(i32,)> = conn
-        .query_first(format!(
-            "SELECT 1 FROM projects WHERE project_id = '{}'",
-            project_id
-        ))
-        .await?;
-    Ok(result.is_some())
-}
-
-pub async fn add_project(
-    pool: &mysql_async::Pool,
-    project_id: &str,
-    project_logo: &str,
-    issue_id: &str,
-) -> Result<()> {
-    let mut conn = pool.get_conn().await?;
-    let issue_id_json: Value = serde_json::json!(issue_id).into();
-
-    let query = r"INSERT INTO projects (project_id, project_logo, issues_list)
-                  VALUES (:project_id, :project_logo, :issues_list)";
-
-    conn.exec_drop(
-        query,
-        params! {
-            "project_id" => project_id,
-            "project_logo" => project_logo,
-            "issues_list" => issue_id_json,
-        },
-    )
-    .await?;
-
-    Ok(())
-}
-
-pub async fn update_project(
-    pool: &mysql_async::Pool,
-    project_id: &str,
-    issue_id: &str,
-) -> Result<()> {
-    let mut conn = pool.get_conn().await?;
-
-    let issue_id_json: Value = serde_json::json!(issue_id).into();
-
-    let params = params! {
-        "issue_id" => &issue_id_json,
-        "project_id" => project_id,
-    };
-    "UPDATE projects
-        SET issues_list = JSON_ARRAY_APPEND(issues_list, '$', :issue_id)
-        WHERE project_id = :project_id"
-        .with(params)
-        .run(&mut conn)
-        .await?;
-
-    Ok(())
-}
-pub async fn list_projects(pool: &Pool) -> Result<Vec<(String, String, Vec<String>)>> {
-    let mut conn = pool.get_conn().await?;
-    let projects: Vec<(String, String, Vec<String>)> = conn
+    let offset = (page - 1) * page_size;
+    let issues: Vec<(String, String, String, String)> = conn
         .query_map(
-            "SELECT project_id, project_logo, JSON_UNQUOTE(JSON_EXTRACT(issues_list, '$')) FROM projects ORDER BY project_id",
-            |(project_id, project_logo, issues_list): (String, String, String)| {
-                (project_id, project_logo, serde_json::from_str(&issues_list).unwrap_or_default())
+            format!(
+                "SELECT issue_id, project_id, issue_title, issue_description FROM issues_master ORDER BY issue_id LIMIT {} OFFSET {}",
+                page_size, offset
+            ),
+            |(issue_id, project_id, issue_title, issue_description): (String, String, String, String)| {
+                (issue_id, project_id, issue_title, issue_description)
             },
         )
         .await?;
 
-    Ok(projects)
-}
-
-pub async fn test_project_exists() {
-    let pool = get_pool().await;
-    let project_id = "https://github.com/test/test13";
-
-    // // Add a project
-    // add_project(&pool, project_id, "test_logo", "test_issue_id")
-    //     .await
-    //     .unwrap();
-
-    // Now the project should exist
-    assert_eq!(project_exists(&pool, project_id).await.unwrap(), true);
-}
-
-pub async fn test_add_project() {
-    let pool = get_pool().await;
-    let project_id = "https://github.com/test/test15";
-
-    let issue_id = "test_issue_id";
-    let res = add_project(&pool, project_id, "test_logo", issue_id).await;
-    println!("res: {:?}", res);
-    // The project should now exist
-    assert_eq!(project_exists(&pool, project_id).await.unwrap(), true);
-}
-
-pub async fn approve_issue(pool: &mysql_async::Pool, issue_id: &str) -> Result<()> {
-    let mut conn = pool.get_conn().await?;
-
-    let query = r"UPDATE issues 
-                  SET issue_budget_approved = True, 
-                      review_status = 'approve'
-                  WHERE issue_id = :issue_id";
-
-    let result = conn
-        .exec_drop(
-            query,
-            params! {
-                "issue_id" => issue_id,
-            },
-        )
-        .await;
-
-    Ok(())
-}
-
-pub async fn approve_issue_budget_in_db(
-    pool: &mysql_async::Pool,
-    issue_id: &str,
-    issue_budget: i32,
-) -> Result<()> {
-    let mut conn = pool.get_conn().await?;
-
-    let query = r"UPDATE issues 
-                  SET issue_budget = :issue_budget
-                  WHERE issue_id = :issue_id";
-
-    let result = conn
-        .exec_drop(
-            query,
-            params! {
-                "issue_id" => issue_id,
-            },
-        )
-        .await;
-
-    Ok(())
+    Ok(issues)
 }

@@ -33,13 +33,13 @@ async fn handler(
         .unwrap();
     router
         .insert(
-            "/budget/:issue_id",
+            "/budget",
             vec![post(approve_issue_budget_handler)],
         )
         .unwrap();
 
     router
-        .insert("/conclude/:issue_id", vec![post(conclude_issue_handler)])
+        .insert("/conclude", vec![post(conclude_issue_handler)])
         .unwrap();
 
     if let Err(e) = route(router).await {

@@ -36,3 +36,47 @@ pub async fn list_issues(
 
     Ok(issues)
 }
+
+pub async fn approve_issue_budget_in_db(
+    pool: &mysql_async::Pool,
+    issue_id: &str,
+    issue_budget: i64,
+) -> Result<()> {
+    let mut conn = pool.get_conn().await?;
+
+    let query = r"UPDATE issues 
+                  SET issue_budget = :issue_budget, 
+                      review_status = 'approve'
+                  WHERE issue_id = :issue_id";
+
+    conn.exec_drop(
+        query,
+        params! {
+            "issue_id" => issue_id,
+            "issue_budget" => issue_budget,
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn conclude_issue_in_db(pool: &mysql_async::Pool, issue_id: &str) -> Result<()> {
+    let mut conn = pool.get_conn().await?;
+
+    let query = r"UPDATE issues 
+                  SET issue_budget_approved = True, 
+                      review_status = 'approve'
+                  WHERE issue_id = :issue_id";
+
+    let result = conn
+        .exec_drop(
+            query,
+            params! {
+                "issue_id" => issue_id,
+            },
+        )
+        .await;
+
+    Ok(())
+}

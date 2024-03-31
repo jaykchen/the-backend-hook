@@ -31,24 +31,16 @@ async fn handler(
     router
         .insert("/issues", vec![get(list_issues_handler)])
         .unwrap();
-    // router
-    //     .insert("/projects/:project_name", vec![get(projects_list)])
-    //     .unwrap();
-    // router
-    //     .insert("/issues/:issue_id", vec![post(approve_issue_budget)])
-    //     .unwrap();
+    router
+        .insert(
+            "/budget/:issue_id",
+            vec![post(approve_issue_budget_handler)],
+        )
+        .unwrap();
 
-    // router
-    //     .insert("/project/:project_name", vec![post(decline_project)])
-    //     .unwrap();
-
-    // router
-    //     .insert("/project/:project_name", vec![post(approve_budget)])
-    //     .unwrap();
-
-    // router
-    //     .insert("/project/:project_name", vec![post(final_approval)])
-    //     .unwrap();
+    router
+        .insert("/conclude/:issue_id", vec![post(conclude_issue_handler)])
+        .unwrap();
 
     if let Err(e) = route(router).await {
         match e {
@@ -62,7 +54,7 @@ async fn handler(
     }
 }
 
-async fn approve_issue_budget(
+async fn approve_issue_budget_handler(
     _headers: Vec<(String, String)>,
     _qry: HashMap<String, Value>,
     _body: Vec<u8>,
@@ -83,7 +75,7 @@ async fn approve_issue_budget(
 
     let issue_budget = match _qry.get("issue_budget") {
         Some(m) => match serde_json::from_value::<String>(m.clone()) {
-            Ok(key) => key.parse::<i32>().unwrap_or_default(),
+            Ok(key) => key.parse::<i64>().unwrap_or_default(),
             Err(_e) => {
                 log::error!("failed to parse issue_budget: {}", _e);
                 return;
@@ -97,8 +89,33 @@ async fn approve_issue_budget(
 
     let pool = get_pool().await;
 
-    // let _ = approve_issue_budget_in_db(&pool, &issue_id, issue_budget).await;
+    let _ = approve_issue_budget_in_db(&pool, &issue_id, issue_budget).await;
 }
+
+async fn conclude_issue_handler(
+    _headers: Vec<(String, String)>,
+    _qry: HashMap<String, Value>,
+    _body: Vec<u8>,
+) {
+    let issue_id = match _qry.get("issue_id") {
+        Some(m) => match serde_json::from_value::<String>(m.clone()) {
+            Ok(key) => key,
+            Err(_e) => {
+                log::error!("failed to parse issue_id: {}", _e);
+                return;
+            }
+        },
+        _ => {
+            log::error!("missing issue_id");
+            return;
+        }
+    };
+
+    let pool = get_pool().await;
+
+    let _ = conclude_issue_in_db(&pool, &issue_id).await;
+}
+
 async fn list_issues_handler(
     _headers: Vec<(String, String)>,
     _qry: HashMap<String, Value>,

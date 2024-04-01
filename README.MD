@@ -24,7 +24,8 @@ Final approval for an issue, OK to send money:
 ```
 POST https://code.flows.network/webhook/5xAx1Yru2BqZ9PUacb3q/conclude
 {
-    "issue_id": "https://github.com/adavijit-navsoft/hacktoberfest-easy/issues/30",
+    "issue_id": "https://github.com/ajjayymahato/HelloHacktoberfest/issues/6",
+    "issue_budget_approved": true
 }
 ```
 

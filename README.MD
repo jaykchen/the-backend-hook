@@ -7,6 +7,7 @@ List issues:
 GET https://code.flows.network/webhook/5xAx1Yru2BqZ9PUacb3q/issues?page=1&page_size=2
 ```
 
+Write data to DB:
 
 Assign budget to an issue:
 ```

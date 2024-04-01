@@ -44,7 +44,7 @@ pub async fn approve_issue_budget_in_db(
 ) -> Result<()> {
     let mut conn = pool.get_conn().await?;
 
-    let query = r"UPDATE issues 
+    let query = r"UPDATE issues_master 
                   SET issue_budget = :issue_budget, 
                       review_status = 'approve'
                   WHERE issue_id = :issue_id";
@@ -64,9 +64,8 @@ pub async fn approve_issue_budget_in_db(
 pub async fn conclude_issue_in_db(pool: &mysql_async::Pool, issue_id: &str) -> Result<()> {
     let mut conn = pool.get_conn().await?;
 
-    let query = r"UPDATE issues 
+    let query = r"UPDATE issues_master 
                   SET issue_budget_approved = True, 
-                      review_status = 'approve'
                   WHERE issue_id = :issue_id";
 
     let result = conn

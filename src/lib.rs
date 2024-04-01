@@ -12,6 +12,15 @@ use webhook_flows::{
     send_response,
 };
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct BodyLoad {
+    pub issue_id: Option<String>,
+    pub issue_budget: Option<i64>,
+    pub admin_feedback: Option<String>,
+    pub issue_budget_approved: Option<bool>,
+    pub review_status_flipper: Option<bool>,
+}
+
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
 pub async fn on_deploy() {
@@ -32,10 +41,7 @@ async fn handler(
         .insert("/issues", vec![get(list_issues_handler)])
         .unwrap();
     router
-        .insert(
-            "/budget",
-            vec![post(approve_issue_budget_handler)],
-        )
+        .insert("/budget", vec![post(approve_issue_budget_handler)])
         .unwrap();
 
     router
@@ -59,36 +65,17 @@ async fn approve_issue_budget_handler(
     _qry: HashMap<String, Value>,
     _body: Vec<u8>,
 ) {
-    let issue_id = match _qry.get("issue_id") {
-        Some(m) => match serde_json::from_value::<String>(m.clone()) {
-            Ok(key) => key,
-            Err(_e) => {
-                log::error!("failed to parse issue_id: {}", _e);
-                return;
-            }
-        },
-        _ => {
-            log::error!("missing issue_id");
+    let load: BodyLoad = match serde_json::from_slice(&_body) {
+        Ok(obj) => obj,
+        Err(_e) => {
+            log::error!("failed to parse body: {}", _e);
             return;
         }
     };
 
-    let issue_budget = match _qry.get("issue_budget") {
-        Some(m) => match serde_json::from_value::<String>(m.clone()) {
-            Ok(key) => key.parse::<i64>().unwrap_or_default(),
-            Err(_e) => {
-                log::error!("failed to parse issue_budget: {}", _e);
-                return;
-            }
-        },
-        _ => {
-            log::error!("missing issue_budget");
-            return;
-        }
-    };
-
+    let issue_budget = load.issue_budget.unwrap_or_default();
+    let issue_id = load.issue_id.unwrap_or_default();
     let pool = get_pool().await;
-
     let _ = approve_issue_budget_in_db(&pool, &issue_id, issue_budget).await;
 }
 
@@ -97,23 +84,20 @@ async fn conclude_issue_handler(
     _qry: HashMap<String, Value>,
     _body: Vec<u8>,
 ) {
-    let issue_id = match _qry.get("issue_id") {
-        Some(m) => match serde_json::from_value::<String>(m.clone()) {
-            Ok(key) => key,
-            Err(_e) => {
-                log::error!("failed to parse issue_id: {}", _e);
-                return;
-            }
-        },
-        _ => {
-            log::error!("missing issue_id");
+    let load: BodyLoad = match serde_json::from_slice(&_body) {
+        Ok(obj) => obj,
+        Err(_e) => {
+            log::error!("failed to parse body: {}", _e);
             return;
         }
     };
 
+    let approve = load.issue_budget_approved.unwrap_or_default();
+    let issue_id = load.issue_id.unwrap_or_default();
     let pool = get_pool().await;
-
-    let _ = conclude_issue_in_db(&pool, &issue_id).await;
+    if approve {
+        let _ = approve_issue_budget_in_db(&pool, &issue_id, 0).await;
+    }
 }
 
 async fn list_issues_handler(

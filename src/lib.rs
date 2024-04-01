@@ -96,7 +96,7 @@ async fn conclude_issue_handler(
     let issue_id = load.issue_id.unwrap_or_default();
     let pool = get_pool().await;
     if approve {
-        let _ = approve_issue_budget_in_db(&pool, &issue_id, 0).await;
+        let _ = conclude_issue_in_db(&pool, &issue_id).await;
     }
 }
 
